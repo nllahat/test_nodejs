@@ -23,5 +23,17 @@
   },
   "typescript.referencesCodeLens.enabled": true,
   "appService.zipIgnorePattern": [".vscode{,/**}"],
-  "appService.deploySubpath": ""
+  "appService.deploySubpath": "",
+  "workbench.colorCustomizations": {
+    "activityBar.background": "#9ac181",
+    "activityBar.activeBorder": "#5476ab",
+    "activityBar.foreground": "#15202b",
+    "activityBar.inactiveForeground": "#15202b99",
+    "activityBarBadge.background": "#5476ab",
+    "activityBarBadge.foreground": "#e7e7e7",
+    "statusBar.background": "#7eb05f",
+    "statusBarItem.hoverBackground": "#659349",
+    "statusBar.foreground": "#15202b"
+  },
+  "peacock.color": "#7eb05f"
 }
