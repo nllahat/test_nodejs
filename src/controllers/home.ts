@@ -15,7 +15,7 @@ export const index = (req: Request, res: Response) => {
 
 export const getActivities = async (req: Request, res: Response, next: NextFunction) => {
   const googleMapsClient = GoogleMaps.createClient({
-    key: "AIzaSyDYaVhAvMrNzI5UxA0vinTsJ2kZxb_tTkk"
+    key: "asdasdasda"
   });
 
   const bodyUserPreferences = req.body.userPreferences;
