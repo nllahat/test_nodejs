@@ -35,5 +35,8 @@
     "statusBarItem.hoverBackground": "#659349",
     "statusBar.foreground": "#15202b"
   },
-  "peacock.color": "#7eb05f"
+  "peacock.color": "#7eb05f",
+  "cSpell.words": [
+    "mapbox"
+  ]
 }

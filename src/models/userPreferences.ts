@@ -2,7 +2,6 @@ export class UserPreferences {
   private _museums: number;
   private _sights: number;
   private _shopping: number;
-
   private _totalPoints: number;
 
   constructor(museums: number, sights: number, shopping: number) {
@@ -28,7 +27,7 @@ export class UserPreferences {
     return this._shopping / this._totalPoints;
   }
 
-  public calculateNumOfMainActivities (numOfActivities: number, preference: number) {
+  public static calculateNumOfMainActivities (numOfActivities: number, preference: number) {
     const result = numOfActivities * preference;
 
     if (result > 0 && result < 1) {
@@ -39,10 +38,10 @@ export class UserPreferences {
 }
 
   /**
-   * museumsNumberOfActivities
+   * categoryNumberOfActivities
    */
-  public museumsNumberOfActivities(totalHours: number, usuallySpent: number) {
-    return totalHours * this.Museums / usuallySpent;
+  public static categoryNumberOfActivities(totalHours: number, usuallySpent: number, categoryPreference: number) {
+    return totalHours * categoryPreference / usuallySpent;
   }
 
   /**

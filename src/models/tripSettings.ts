@@ -10,9 +10,8 @@ export class TripSettings {
   private _days: number;
   private _city: string;
   private _mainActivitiesPerDay: number;
-
   private _spentHoursPerDay: number;
-
+  private _totalHours: number;
   private _usuallySpent: UsuallySpentPerCategory;
 
   constructor(
@@ -27,6 +26,7 @@ export class TripSettings {
     this._mainActivitiesPerDay = mainActivitiesPerDay;
     this._usuallySpent = usuallySpent;
     this._spentHoursPerDay = spentHoursPerDay;
+    this._totalHours = this._days * this._spentHoursPerDay;
   }
 
   public get Days(): number {
@@ -49,11 +49,8 @@ export class TripSettings {
     return this._usuallySpent;
   }
 
-  /**
-   * Calculate total hours for the whole trip
-   */
-  public calcTotalHours() {
-    return this._days * this._spentHoursPerDay;
+  public get TotalHours(): number {
+    return this._totalHours;
   }
 
   /**
