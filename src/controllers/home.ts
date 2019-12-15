@@ -130,35 +130,51 @@ export const getActivities = async (req: Request, res: Response, next: NextFunct
       }
     };
 
-    const points = [
-      ...topMuseums,
-      ...otherMuseums,
-      ...topShoppings,
-      ...otherShoppings,
-      ...topSights,
-      ...otherSights
-    ].map(mus => [mus.geometry.location.lat, mus.geometry.location.lng].join(","));
-    const pointsStr: GoogleMaps.LatLng[] = [points.join("|")];
+    interface InterfaceMap {
+      [k: string]: GoogleMaps.PlaceSearchResult;
+    }
+    const map: InterfaceMap = {};
+    const points = [...topMuseums, ...otherMuseums, ...topShoppings, ...otherShoppings, ...topSights, ...otherSights];
+    for (const point of points) {
+      map[point.place_id] = point;
+    }
+    /* const points = [...topMuseums, ...otherMuseums, ...topShoppings, ...otherShoppings, ...topSights, ...otherSights].map(mus =>
+      [mus.geometry.location.lat, mus.geometry.location.lng].join(",")
+    ); */
+
+    const from = Object.values(map)
+      .slice(0, Math.round(points.length / 2))
+      .map(mus => [mus.geometry.location.lat, mus.geometry.location.lng].join(","));
+    const to = Object.values(map)
+      .slice(Math.round(points.length / 2), points.length)
+      .map(mus => [mus.geometry.location.lat, mus.geometry.location.lng].join(","));
+    const fromPointsStr: GoogleMaps.LatLng[] = [from.join("|")];
+    const toPointsStr: GoogleMaps.LatLng[] = [to.join("|")];
 
     try {
-        debugger;
-        const result = await googleMapsClient.distanceMatrix({
-            origins: pointsStr,
-            destinations: pointsStr
-          }).asPromise();
+      debugger;
+      const result: GoogleMaps.ClientResponse<GoogleMaps.DistanceMatrixResponse> = await googleMapsClient
+        .distanceMatrix({
+          mode: "walking",
+          origins: fromPointsStr,
+          destinations: toPointsStr
+        })
+        .asPromise();
 
-          debugger;
+      console.log(
+        `from ${map[Object.keys(map)[0]].name} to ${map[Object.keys(map)[Math.round(points.length / 2) + 1]].name}: ${JSON.stringify(
+          result.json.rows[0].elements[1]
+        )}`
+      );
+
+      res.status(200).json({
+        data: {
+          ...result
+        }
+      });
     } catch (error) {
-        debugger;
+      debugger;
     }
-
-
-    res.status(200).json({
-      /* data: {
-        ...results
-      } */
-      data: {}
-    });
   } catch (error) {
     next(error);
   }
