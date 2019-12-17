@@ -133,26 +133,25 @@ export const getActivities = async (req: Request, res: Response, next: NextFunct
     interface InterfaceMap {
       [k: string]: GoogleMaps.PlaceSearchResult;
     }
-    const map: InterfaceMap = {};
+    const fromMap: InterfaceMap = {};
+    const toMap: InterfaceMap = {};
     const points = [...topMuseums, ...otherMuseums, ...topShoppings, ...otherShoppings, ...topSights, ...otherSights];
-    for (const point of points) {
-      map[point.place_id] = point;
-    }
-    /* const points = [...topMuseums, ...otherMuseums, ...topShoppings, ...otherShoppings, ...topSights, ...otherSights].map(mus =>
-      [mus.geometry.location.lat, mus.geometry.location.lng].join(",")
-    ); */
+    const fromPoints = points.slice(0, Math.round(points.length / 2));
+    const toPoints = points.slice(Math.round(points.length / 2), points.length);
 
-    const from = Object.values(map)
-      .slice(0, Math.round(points.length / 2))
-      .map(mus => [mus.geometry.location.lat, mus.geometry.location.lng].join(","));
-    const to = Object.values(map)
-      .slice(Math.round(points.length / 2), points.length)
-      .map(mus => [mus.geometry.location.lat, mus.geometry.location.lng].join(","));
-    const fromPointsStr: GoogleMaps.LatLng[] = [from.join("|")];
-    const toPointsStr: GoogleMaps.LatLng[] = [to.join("|")];
+    for (const point of fromPoints) {
+      fromMap[point.place_id] = point;
+    }
+    for (const point of toPoints) {
+      toMap[point.place_id] = point;
+    }
+
+    const fromStrArr = fromPoints.map(mus => [mus.geometry.location.lat, mus.geometry.location.lng].join(","));
+    const toStrArr = toPoints.map(mus => [mus.geometry.location.lat, mus.geometry.location.lng].join(","));
+    const fromPointsStr: GoogleMaps.LatLng[] = [fromStrArr.join("|")];
+    const toPointsStr: GoogleMaps.LatLng[] = [toStrArr.join("|")];
 
     try {
-      debugger;
       const result: GoogleMaps.ClientResponse<GoogleMaps.DistanceMatrixResponse> = await googleMapsClient
         .distanceMatrix({
           mode: "walking",
@@ -161,11 +160,15 @@ export const getActivities = async (req: Request, res: Response, next: NextFunct
         })
         .asPromise();
 
-      console.log(
-        `from ${map[Object.keys(map)[0]].name} to ${map[Object.keys(map)[Math.round(points.length / 2) + 1]].name}: ${JSON.stringify(
-          result.json.rows[0].elements[1]
-        )}`
-      );
+      for (let i = 0; i < fromPoints.length; i++) {
+        const fromPoint = fromPoints[i];
+        console.log(`${i} FROM: ${fromPoint.formatted_address}`);
+        for (let j = 0; j < toPoints.length; j++) {
+          const toPoint = toPoints[j];
+          const distanceData = result.json.rows[i].elements[j];
+          console.log(`   ${j} TO: ${toPoint.formatted_address} =======> ${distanceData.distance.text}`);
+        }
+      }
 
       res.status(200).json({
         data: {
