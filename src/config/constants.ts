@@ -2,6 +2,7 @@ import { UsuallySpentPerCategory } from "../models/tripSettings";
 
 export class Constants {
   static readonly USUALLY_SPENT: UsuallySpentPerCategory = {
+    default: 1.5,
     museums: 2,
     shopping: 3,
     sights: 1.5

@@ -1,9 +1,7 @@
 import { Constants } from "../config/constants";
 
 export interface UsuallySpentPerCategory {
-  museums: number;
-  sights: number;
-  shopping: number;
+  [key: string]: number;
 }
 
 export class TripSettings {

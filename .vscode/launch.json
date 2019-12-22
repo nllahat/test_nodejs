@@ -19,7 +19,8 @@
             "port": 9229,
             "restart": true,
             "localRoot": "${workspaceFolder}",
-            "remoteRoot": "."
+            "remoteRoot": ".",
+            "sourceMaps": true
         },
     ]
 }
