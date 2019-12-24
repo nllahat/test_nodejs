@@ -1,3 +1,5 @@
+import { Point } from "./categories/baseCategory";
+
 export class Trip {
   days: TripDay[];
   daysCount: number;
@@ -9,32 +11,37 @@ export class Trip {
 }
 
 export class TripDay {
-  activities: Activity[];
+  activities: Point[];
+  mainActivities: Point[];
   maxActivities: number;
+  maxMainActivities: number;
 
-  constructor(maxActivities: number) {
+  constructor(maxMainActivities: number, maxActivities: number) {
     this.maxActivities = maxActivities;
+    this.maxMainActivities = maxMainActivities;
+    this.mainActivities = [];
     this.activities = [];
+  }
+
+  /**
+   * addMainActivity
+   */
+  public addMainActivity(activity: Point) {
+    if (this.mainActivities.length < this.maxMainActivities) {
+      this.mainActivities.push(activity);
+    } else {
+      throw new Error("activities exceeded");
+    }
   }
 
   /**
    * addActivity
    */
-  public addActivity(activity: Activity) {
+  public addActivity(activity: Point) {
     if (this.activities.length < this.maxActivities) {
       this.activities.push(activity);
     } else {
       throw new Error("activities exceeded");
     }
-  }
-}
-
-export class Activity {
-  name: string;
-  id: string;
-
-  constructor(id: string, name: string) {
-    this.id = id;
-    this.name = name;
   }
 }

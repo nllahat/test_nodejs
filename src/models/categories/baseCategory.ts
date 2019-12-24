@@ -1,18 +1,43 @@
+export class GeoLocation {
+  private _latitude: number;
+  private _longitude: number;
 
-class GeoLocation {
-    private latitude: number;
-    private longitude: number;
+  constructor(latitude: number, longitude: number) {
+    this._latitude = latitude;
+    this._longitude = longitude;
+  }
+
+  public get Latitude(): number {
+    return this._latitude;
+  }
+
+  public get Longitude(): number {
+    return this._longitude;
+  }
 }
 export class Point {
-    private _id: string;
-    private _name: string;
-    private _location: GeoLocation;
+  private _id: string;
+  private _name: string;
+  private _location: GeoLocation;
+  private _distanceMatrixIndex: number;
 
-    constructor (id: string, name: string, location: GeoLocation) {
-        this._id = id;
-        this._name = name;
-        this._location = location;
-    }
+  constructor(id: string, name: string, location: GeoLocation) {
+    this._id = id;
+    this._name = name;
+    this._location = location;
+  }
+
+  public get Location(): GeoLocation {
+    return this._location;
+  }
+
+  public get DistanceMatrixIndex(): number {
+    return this._distanceMatrixIndex;
+  }
+
+  public set DistanceMatrixIndex(index: number) {
+    this._distanceMatrixIndex = index;
+  }
 }
 export class BaseCategory {
   private _usuallySpentHours: number;
@@ -40,5 +65,9 @@ export class BaseCategory {
 
   get UsuallySpentHours(): number {
     return this._usuallySpentHours;
+  }
+
+  get Points(): Point[] {
+    return this._points;
   }
 }

@@ -2,12 +2,12 @@ import { Request, Response, NextFunction } from "express";
 import { TripSettings } from "../models/tripSettings";
 import * as GoogleMaps from "@google/maps";
 import { DistanceMatrix } from "../models/distanceMatrix";
-import { Trip, TripDay, Activity } from "../models/trip";
-import { TripConfigurations, CategoriesMap, CategoriesNumOfActivitiesMap } from "../models/tripConfigurations";
+import { Trip, TripDay } from "../models/trip";
+import { TripConfigurations, CategoriesMap } from "../models/tripConfigurations";
 import { Constants } from "../config/constants";
-import { BaseCategory } from "../models/categories/baseCategory";
+import { BaseCategory, Point, GeoLocation } from "../models/categories/baseCategory";
 
-let cacheMatrix: DistanceMatrix = null;
+const cacheMatrix: DistanceMatrix = null;
 
 /**
  * GET /
@@ -38,7 +38,8 @@ export const getActivities = async (req: Request, res: Response, next: NextFunct
   const tripSettings: TripSettings = new TripSettings(
     bodyTripSettings.days,
     bodyTripSettings.city,
-    bodyTripSettings.mainActivitiesPerDay
+    bodyTripSettings.mainActivitiesPerDay,
+    bodyTripSettings.otherActivitiesPerDay
   );
 
   const categoryPreferences: CategoriesMap = {};
@@ -52,30 +53,105 @@ export const getActivities = async (req: Request, res: Response, next: NextFunct
   });
 
   const tripConfigurations: TripConfigurations = new TripConfigurations(categoryPreferences, tripSettings);
-  if (cacheMatrix === null) {
-    try {
-      const promises: Array<Promise<GoogleMaps.ClientResponse<GoogleMaps.PlaceSearchResponse>>> = [];
-      const results;
+  // if (cacheMatrix === null) {
+  try {
+    const promises: Array<Promise<GoogleMaps.ClientResponse<GoogleMaps.PlaceSearchResponse>>> = [];
+    // const results;
 
-      Object.keys(tripConfigurations.CategoryPreferences).forEach(categoryName => {
-        promises.push(
-          googleMapsClient
-            .places({
-              query: categoryName + " " + tripSettings.City
-            })
-            .asPromise()
+    Object.keys(tripConfigurations.CategoryPreferences).forEach(categoryName => {
+      promises.push(
+        googleMapsClient
+          .places({
+            query: categoryName + " " + tripSettings.City
+          })
+          .asPromise()
+      );
+    });
+    const searchPlacesResults: Array<GoogleMaps.ClientResponse<GoogleMaps.PlaceSearchResponse>> = await Promise.all(promises);
+
+    for (let index = 0; index < Object.keys(tripConfigurations.CategoryPreferences).length; index++) {
+      for (let resultIndex = 0; resultIndex < searchPlacesResults[index].json.results.length; resultIndex++) {
+        const googlePoint = searchPlacesResults[index].json.results[resultIndex];
+        const point: Point = new Point(
+          googlePoint.place_id,
+          googlePoint.name,
+          new GeoLocation(googlePoint.geometry.location.lat, googlePoint.geometry.location.lng)
         );
-      });
-      const searchPlacesResults: Array<GoogleMaps.ClientResponse<GoogleMaps.PlaceSearchResponse>> = await Promise.all(promises);
 
-      for (let index = 0; index < Object.keys(tripConfigurations.CategoryPreferences).length; index++) {
-        tripConfigurations.CategoryPreferences[Object.keys(tripConfigurations.CategoryPreferences)[index]].addPoint;
-
+        tripConfigurations.CategoryPreferences[Object.keys(tripConfigurations.CategoryPreferences)[index]].addPoint(point);
       }
+    }
 
-      const mainPerCategory: CategoriesNumOfActivitiesMap = tripConfigurations.NumberOfMainActivitiesPerCategory;
+    const points: Point[] = tripConfigurations.getAllPoints();
+    const numberOfChunks = Math.ceil(points.length / maxTo);
+    const distanceMatrix = new DistanceMatrix(points.length);
 
-      const museums: GoogleMaps.PlaceSearchResult[] = searchPlacesResults[0].json.results;
+    for (let i = 0; i < numberOfChunks; i++) {
+      const fromIIndex = i * maxTo;
+      const first: Point[] = points.slice(fromIIndex, fromIIndex + maxTo);
+      const fromStrArr = first.map(point => [point.Location.Latitude, point.Location.Longitude].join(","));
+      const fromPointsStr: GoogleMaps.LatLng[] = [fromStrArr.join("|")];
+
+      for (let j = i; j < numberOfChunks; j++) {
+        const fromJIndex = j * maxTo;
+        const second = points.slice(fromJIndex, fromJIndex + maxTo);
+        const toStrArr = second.map(point => [point.Location.Latitude, point.Location.Longitude].join(","));
+        const toPointsStr: GoogleMaps.LatLng[] = [toStrArr.join("|")];
+
+        const result: GoogleMaps.ClientResponse<GoogleMaps.DistanceMatrixResponse> = await googleMapsClient
+          .distanceMatrix({
+            mode: "walking",
+            origins: fromPointsStr,
+            destinations: toPointsStr,
+            units: "metric"
+          })
+          .asPromise();
+
+        for (let fromIndex = 0; fromIndex < first.length; fromIndex++) {
+          for (let toIndex = 0; toIndex < second.length; toIndex++) {
+            distanceMatrix.addEdge(
+              fromIndex + fromIIndex,
+              toIndex + fromJIndex,
+              result.json.rows[fromIndex].elements[toIndex].distance.value
+            );
+          }
+        }
+      }
+    }
+
+    for (let pointIndex = 0; pointIndex < points.length; pointIndex++) {
+      points[pointIndex].DistanceMatrixIndex = pointIndex;
+    }
+
+    const trip: Trip = new Trip(tripSettings.Days);
+
+    for (let index = 0; index < trip.days.length; index++) {
+      trip.days[index] = new TripDay(tripSettings.MainActivitiesPerDay, tripSettings.OtherActivitiesPerDay);
+    }
+
+    Object.keys(tripConfigurations.CategoryPreferences).forEach(categoryName => {
+      const categoryPoints = [...tripConfigurations.CategoryPreferences[categoryName].Points];
+
+      if (!categoryPoints || !categoryPoints.length) {
+        return;
+      } else {
+        let counter = 0;
+        for (
+          let dayIndex = 0;
+          dayIndex < trip.days.length && counter < tripConfigurations.NumberOfMainActivitiesPerCategory[categoryName];
+          dayIndex++
+        ) {
+          if (trip.days[dayIndex].mainActivities.length < trip.days[dayIndex].maxMainActivities) {
+            trip.days[dayIndex].addMainActivity(categoryPoints.shift());
+            counter++;
+          }
+        }
+      }
+    });
+
+    console.log(JSON.stringify(trip));
+
+    /* const museums: GoogleMaps.PlaceSearchResult[] = searchPlacesResults[0].json.results;
       const sights: GoogleMaps.PlaceSearchResult[] = searchPlacesResults[1].json.results;
       const shopping: GoogleMaps.PlaceSearchResult[] = searchPlacesResults[2].json.results;
 
@@ -204,13 +280,13 @@ export const getActivities = async (req: Request, res: Response, next: NextFunct
           const museum = topMuseums.shift();
           trip.days[index].addActivity(new Activity(museum.place_id, museum.name));
         }
-      }
-    } catch (error) {
-      next(error);
-    }
+      } */
+  } catch (error) {
+    next(error);
   }
+  //}
 
-  cacheMatrix.printGraph();
+  // cacheMatrix.printGraph();
 
   res.status(200).end();
 };
