@@ -26,7 +26,9 @@ export class DistanceMatrix {
         row.push(this.matrix[i][j]);
       }
 
-      console.log(row.join("    "));
+      console.log(i + ": " + row.join("  "));
     }
+
+    //console.log(JSON.stringify(this.matrix));
   }
 }

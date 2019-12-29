@@ -23,6 +23,36 @@ interface BodyCategoryPreferences {
   [key: string]: number;
 }
 
+function checkDistance(arrA: Point[], arrB: Point[], distanceMatrix: DistanceMatrix, usageMap: {}): number {
+  let minDistance = 5000; // 5 km
+  let toIndex = -1;
+
+  if (!arrA.length) {
+    for (let j = 0; j < arrB.length; j++) {
+      if (!usageMap[arrB[j].ID]) {
+        return j;
+      }
+    }
+
+    return -1;
+  }
+
+  for (let i = 0; i < arrA.length; i++) {
+    for (let j = 0; j < arrB.length; j++) {
+      if (
+        arrA[i].ID !== arrB[j].ID &&
+        !usageMap[arrB[j].ID] &&
+        distanceMatrix.matrix[arrA[i].DistanceMatrixIndex][arrB[j].DistanceMatrixIndex] < minDistance
+      ) {
+        toIndex = j;
+        minDistance = distanceMatrix.matrix[i][j];
+      }
+    }
+  }
+
+  return toIndex;
+}
+
 export const getActivities = async (req: Request, res: Response, next: NextFunction) => {
   const maxLocations = 20;
   const maxTo = Math.floor(maxLocations / 2);
@@ -135,152 +165,65 @@ export const getActivities = async (req: Request, res: Response, next: NextFunct
       if (!categoryPoints || !categoryPoints.length) {
         return;
       } else {
-        let counter = 0;
+        let mainCounter = 0;
         for (
           let dayIndex = 0;
-          dayIndex < trip.days.length && counter < tripConfigurations.NumberOfMainActivitiesPerCategory[categoryName];
+          dayIndex < trip.days.length && mainCounter < tripConfigurations.NumberOfMainActivitiesPerCategory[categoryName];
           dayIndex++
         ) {
           if (trip.days[dayIndex].mainActivities.length < trip.days[dayIndex].maxMainActivities) {
-            trip.days[dayIndex].addMainActivity(categoryPoints.shift());
-            counter++;
+            const selectedIndex = checkDistance(
+              trip.days[dayIndex].mainActivities,
+              categoryPoints,
+              distanceMatrix,
+              trip.mainActivitiesMap
+            );
+
+            if (selectedIndex > -1) {
+              trip.days[dayIndex].addMainActivity(categoryPoints[selectedIndex]);
+              trip.mainActivitiesMap[categoryPoints[selectedIndex].ID] = true;
+              mainCounter++;
+
+              categoryPoints.splice(selectedIndex, 1);
+            }
           }
         }
       }
     });
 
-    console.log(JSON.stringify(trip));
+    Object.keys(tripConfigurations.CategoryPreferences).forEach(categoryName => {
+      const categoryPoints = [...tripConfigurations.CategoryPreferences[categoryName].Points];
 
-    /* const museums: GoogleMaps.PlaceSearchResult[] = searchPlacesResults[0].json.results;
-      const sights: GoogleMaps.PlaceSearchResult[] = searchPlacesResults[1].json.results;
-      const shopping: GoogleMaps.PlaceSearchResult[] = searchPlacesResults[2].json.results;
+      if (!categoryPoints || !categoryPoints.length) {
+        return;
+      } else {
+        let counter = 0;
+        for (
+          let dayIndex = 0;
+          dayIndex < trip.days.length && counter < tripConfigurations.NumberOfActivitiesPerCategory[categoryName];
+          dayIndex++
+        ) {
+          if (trip.days[dayIndex].activities.length < trip.days[dayIndex].maxActivities) {
+            const selectedIndex = checkDistance(
+              trip.days[dayIndex].activities,
+              categoryPoints,
+              distanceMatrix,
+              trip.mainActivitiesMap
+            );
 
-      const numberOfMainActivitiesMuseums = UserPreferences.calculateNumOfMainActivities(
-        UserPreferences.categoryNumberOfActivities(
-          tripSettings.TotalHours,
-          tripSettings.UsuallySpent.museums,
-          tripConfigurations.Museums
-        ),
-        tripConfigurations.Museums
-      );
-      const numberOfMainActivitiesMuseumsPerDay = Math.ceil(numberOfMainActivitiesMuseums / tripSettings.Days);
-      const numberOfMainActivitiesSights = UserPreferences.calculateNumOfMainActivities(
-        UserPreferences.categoryNumberOfActivities(
-          tripSettings.TotalHours,
-          tripSettings.UsuallySpent.sights,
-          tripConfigurations.Sights
-        ),
-        tripConfigurations.Sights
-      );
-      const numberOfMainActivitiesSightsPerDay = Math.ceil(numberOfMainActivitiesSights / tripSettings.Days);
-      const numberOfMainActivitiesShopping = UserPreferences.calculateNumOfMainActivities(
-        UserPreferences.categoryNumberOfActivities(
-          tripSettings.TotalHours,
-          tripSettings.UsuallySpent.shopping,
-          tripConfigurations.Shopping
-        ),
-        tripConfigurations.Shopping
-      );
-      const numberOfMainActivitiesShoppingPerDay = Math.ceil(numberOfMainActivitiesShopping / tripSettings.Days);
+            if (selectedIndex > -1) {
+              trip.days[dayIndex].addActivity(categoryPoints[selectedIndex]);
+              trip.mainActivitiesMap[categoryPoints[selectedIndex].ID] = true;
+              counter++;
 
-      const topMuseums = museums.slice(0, numberOfMainActivitiesMuseums);
-      const otherMuseums = museums.slice(
-        numberOfMainActivitiesMuseums,
-        UserPreferences.categoryNumberOfActivities(
-          tripSettings.TotalHours,
-          tripSettings.UsuallySpent.museums,
-          tripConfigurations.Museums
-        )
-      );
-
-      const topShoppings = shopping.slice(0, numberOfMainActivitiesShopping);
-      const otherShoppings = shopping.slice(
-        numberOfMainActivitiesShopping,
-        UserPreferences.categoryNumberOfActivities(
-          tripSettings.TotalHours,
-          tripSettings.UsuallySpent.shopping,
-          tripConfigurations.Shopping
-        )
-      );
-
-      const topSights = sights.slice(0, numberOfMainActivitiesSights);
-      const otherSights = sights.slice(
-        numberOfMainActivitiesSights,
-        UserPreferences.categoryNumberOfActivities(
-          tripSettings.TotalHours,
-          tripSettings.UsuallySpent.sights,
-          tripConfigurations.Sights
-        )
-      );
-      const results = {
-        museums: {
-          top: topMuseums,
-          other: otherMuseums
-        },
-        shopping: {
-          top: topShoppings,
-          other: otherShoppings
-        },
-        sights: {
-          top: topSights,
-          other: otherSights
-        }
-      };
-
-      interface InterfaceMap {
-        [k: string]: GoogleMaps.PlaceSearchResult;
-      }
-
-      const points = [...topMuseums, ...otherMuseums, ...topShoppings, ...otherShoppings, ...topSights, ...otherSights];
-      const numberOfChunks = Math.ceil(points.length / maxTo);
-      const distanceMatrix = new DistanceMatrix(points.length);
-
-      for (let i = 0; i < numberOfChunks; i++) {
-        const fromIIndex = i * maxTo;
-        const first = points.slice(fromIIndex, fromIIndex + maxTo);
-        const fromStrArr = first.map(mus => [mus.geometry.location.lat, mus.geometry.location.lng].join(","));
-        const fromPointsStr: GoogleMaps.LatLng[] = [fromStrArr.join("|")];
-
-        for (let j = i; j < numberOfChunks; j++) {
-          const fromJIndex = j * maxTo;
-          const second = points.slice(fromJIndex, fromJIndex + maxTo);
-          const toStrArr = second.map(mus => [mus.geometry.location.lat, mus.geometry.location.lng].join(","));
-          const toPointsStr: GoogleMaps.LatLng[] = [toStrArr.join("|")];
-
-          const result: GoogleMaps.ClientResponse<GoogleMaps.DistanceMatrixResponse> = await googleMapsClient
-            .distanceMatrix({
-              mode: "walking",
-              origins: fromPointsStr,
-              destinations: toPointsStr,
-              units: "metric"
-            })
-            .asPromise();
-
-          for (let fromIndex = 0; fromIndex < first.length; fromIndex++) {
-            for (let toIndex = 0; toIndex < second.length; toIndex++) {
-              distanceMatrix.addEdge(
-                fromIndex + fromIIndex,
-                toIndex + fromJIndex,
-                result.json.rows[fromIndex].elements[toIndex].distance.value
-              );
+              categoryPoints.splice(selectedIndex, 1);
             }
           }
         }
       }
+    });
 
-      cacheMatrix = distanceMatrix;
-
-      const trip: Trip = new Trip(tripSettings.Days);
-
-      // Spread main museums per day
-      for (let index = 0; index < trip.days.length; index++) {
-        trip.days[index] = new TripDay(tripSettings.MainActivitiesPerDay);
-
-        if (topMuseums.length) {
-          const museum = topMuseums.shift();
-          trip.days[index].addActivity(new Activity(museum.place_id, museum.name));
-        }
-      } */
+    res.status(200).json({ data: trip });
   } catch (error) {
     next(error);
   }

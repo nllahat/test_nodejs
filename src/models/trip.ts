@@ -3,10 +3,12 @@ import { Point } from "./categories/baseCategory";
 export class Trip {
   days: TripDay[];
   daysCount: number;
+  mainActivitiesMap: {};
 
   constructor(daysCount: number) {
     this.daysCount = daysCount;
     this.days = new Array<TripDay>(this.daysCount);
+    this.mainActivitiesMap = {};
   }
 }
 

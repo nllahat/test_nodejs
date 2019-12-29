@@ -38,6 +38,10 @@ export class Point {
   public set DistanceMatrixIndex(index: number) {
     this._distanceMatrixIndex = index;
   }
+
+  public get ID(): string {
+    return this._id;
+  }
 }
 export class BaseCategory {
   private _usuallySpentHours: number;
