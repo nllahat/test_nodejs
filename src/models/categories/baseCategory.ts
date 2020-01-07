@@ -48,12 +48,14 @@ export class BaseCategory {
   private _userPreference: number;
   private _name: string;
   private _points: Point[];
+  private _maxPointsCount: number
 
-  constructor(name: string, userPreference: number, usuallySpentHours: number) {
+  constructor(name: string, userPreference: number, usuallySpentHours: number, totalHoursPerDay: number) {
     this._userPreference = userPreference;
     this._usuallySpentHours = usuallySpentHours;
     this._name = name;
     this._points = [];
+    this._maxPointsCount = Math.floor(userPreference * totalHoursPerDay / usuallySpentHours);
   }
 
   /**
@@ -73,5 +75,9 @@ export class BaseCategory {
 
   get Points(): Point[] {
     return this._points;
+  }
+
+  get MaxPointsCount(): number {
+    return this._maxPointsCount;
   }
 }

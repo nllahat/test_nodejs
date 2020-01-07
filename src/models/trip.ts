@@ -13,35 +13,29 @@ export class Trip {
 }
 
 export class TripDay {
-  activities: Point[];
-  mainActivities: Point[];
-  maxActivities: number;
-  maxMainActivities: number;
+  partOnePoint: Point[];
+  maxPartOne: number;
+  partTwoPoint: Point[];
+  maxPartTwo: number
 
-  constructor(maxMainActivities: number, maxActivities: number) {
-    this.maxActivities = maxActivities;
-    this.maxMainActivities = maxMainActivities;
-    this.mainActivities = [];
-    this.activities = [];
+  constructor(partOnePointsLength: number, partTwoPointsLength: number) {
+    this.partOnePoint = [];
+    this.partTwoPoint = [];
+    this.maxPartOne = partOnePointsLength;
+    this.maxPartTwo = partTwoPointsLength;
   }
 
-  /**
-   * addMainActivity
-   */
-  public addMainActivity(activity: Point) {
-    if (this.mainActivities.length < this.maxMainActivities) {
-      this.mainActivities.push(activity);
+  public addToPartOne(point: Point) {
+    if (this.partOnePoint.length < this.maxPartOne) {
+      this.partOnePoint.push(point);
     } else {
       throw new Error("activities exceeded");
     }
   }
 
-  /**
-   * addActivity
-   */
-  public addActivity(activity: Point) {
-    if (this.activities.length < this.maxActivities) {
-      this.activities.push(activity);
+  public addToPartTwo(point: Point) {
+    if (this.partTwoPoint.length < this.maxPartTwo) {
+      this.partTwoPoint.push(point);
     } else {
       throw new Error("activities exceeded");
     }

@@ -7,27 +7,27 @@ export interface UsuallySpentPerCategory {
 export class TripSettings {
   private _days: number;
   private _city: string;
-  private _mainActivitiesPerDay: number;
-  private _otherActivitiesPerDay: number;
   private _spentHoursPerDay: number;
+  private _partOneHours: number;
+  private _partTwoHours: number;
   private _totalHours: number;
   private _usuallySpent: UsuallySpentPerCategory;
 
   constructor(
     days: number,
     city: string,
-    mainActivitiesPerDay: number = Constants.MAIN_ACTIVITIES_PER_DAY,
-    otherActivitiesPerDay: number = Constants.OTHER_ACTIVITIES_PER_DAY,
     usuallySpent: UsuallySpentPerCategory = Constants.USUALLY_SPENT,
-    spentHoursPerDay: number = Constants.SPENT_HOURS_PER_DAY
+    spentHoursPerDay: number = Constants.SPENT_HOURS_PER_DAY,
+    partOneHours: number = Constants.DAY_PART_ONE_HOURS,
+    partTwoHours: number = Constants.DAY_PART_TWO_HOURS
   ) {
     this._days = days;
     this._city = city;
-    this._mainActivitiesPerDay = mainActivitiesPerDay;
-    this._otherActivitiesPerDay = otherActivitiesPerDay;
     this._usuallySpent = usuallySpent;
     this._spentHoursPerDay = spentHoursPerDay;
     this._totalHours = this._days * this._spentHoursPerDay;
+    this._partOneHours = partOneHours;
+    this._partTwoHours = partTwoHours;
   }
 
   public get Days(): number {
@@ -36,14 +36,6 @@ export class TripSettings {
 
   public get City(): string {
     return this._city;
-  }
-
-  public get MainActivitiesPerDay(): number {
-    return this._mainActivitiesPerDay;
-  }
-
-  public get OtherActivitiesPerDay(): number {
-    return this._otherActivitiesPerDay;
   }
 
   public get SpentHoursPerDay(): number {
@@ -58,10 +50,11 @@ export class TripSettings {
     return this._totalHours;
   }
 
-  /**
-   * Calculate total main activities for the whole trip
-   */
-  public calcTotalMainActivities() {
-    return this._days * this._mainActivitiesPerDay;
+  public get PartOneHours(): number {
+    return this._partOneHours;
+  }
+
+  public get PartTwoHours(): number {
+    return this._partTwoHours;
   }
 }
