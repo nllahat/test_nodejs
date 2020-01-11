@@ -5,7 +5,7 @@ export class Constants {
     default: 1.5,
     museums: 2,
     shopping: 1,
-    sights: 1,
+    sights: 1.5,
     parks: 1.5
   };
   static readonly MAIN_ACTIVITIES_PER_DAY = 2;

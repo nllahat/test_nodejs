@@ -12,22 +12,10 @@ export interface CategoriesNumOfActivitiesMap {
 
 export class TripConfigurations {
   private _categoryPreferences: CategoriesMap;
-  private _totalPreferencesPoints: number;
   private _tripDistanceMatrix: DistanceMatrix;
 
   constructor(categoryPreferences: CategoriesMap) {
     this._categoryPreferences = categoryPreferences;
-    this._totalPreferencesPoints = this._calculateTotalPreferencesPoints();
-  }
-
-  /**
-   * calculateTotalPreferencesPoints
-   */
-  private _calculateTotalPreferencesPoints(): number {
-    return Object.keys(this._categoryPreferences).reduce(
-      (accumulator: number, currentKey: string) => accumulator + this._categoryPreferences[currentKey].UserPreference,
-      0
-    );
   }
 
   /**
