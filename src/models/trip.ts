@@ -10,6 +10,12 @@ export class Trip {
     this.days = new Array<TripDay>(this.daysCount);
     this.mainActivitiesMap = {};
   }
+
+  public toJSON() {
+    return {
+      days: this.days && this.days.map(day => day.toJSON())
+    };
+  }
 }
 
 export class TripDay {
@@ -45,5 +51,12 @@ export class TripDay {
     } else {
       throw new Error("activities exceeded");
     }
+  }
+
+  public toJSON() {
+    return {
+      partOnePoints: this.partOnePoints.map(point => point.toJSON()),
+      partTwoPoints: this.partTwoPoints.map(point => point.toJSON())
+    };
   }
 }

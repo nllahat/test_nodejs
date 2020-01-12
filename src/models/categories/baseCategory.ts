@@ -14,17 +14,26 @@ export class GeoLocation {
   public get Longitude(): number {
     return this._longitude;
   }
+
+  public toJSON() {
+    return {
+      latitude: this._latitude,
+      longitude: this._longitude
+    };
+  }
 }
 export class Point {
   private _id: string;
   private _name: string;
   private _location: GeoLocation;
   private _distanceMatrixIndex: number;
+  private _type: string;
 
-  constructor(id: string, name: string, location: GeoLocation) {
+  constructor(id: string, name: string, location: GeoLocation, type: string) {
     this._id = id;
     this._name = name;
     this._location = location;
+    this._type = type;
   }
 
   public get Location(): GeoLocation {
@@ -45,6 +54,19 @@ export class Point {
 
   public get Name(): string {
     return this._name;
+  }
+
+  public get Type(): string {
+    return this._type;
+  }
+
+  public toJSON() {
+    return {
+      id: this._id,
+      name: this._name,
+      type: this._type,
+      location: this._location && this._location.toJSON()
+    };
   }
 }
 

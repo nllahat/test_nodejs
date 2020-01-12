@@ -102,7 +102,8 @@ async function getPointsByCategory(tripConfigurations: TripConfigurations, tripS
         const point: Point = new Point(
           googlePoint.place_id,
           googlePoint.name,
-          new GeoLocation(googlePoint.geometry.location.lat, googlePoint.geometry.location.lng)
+          new GeoLocation(googlePoint.geometry.location.lat, googlePoint.geometry.location.lng),
+          Object.keys(tripConfigurations.CategoryPreferences)[index]
         );
 
         tripConfigurations.CategoryPreferences[Object.keys(tripConfigurations.CategoryPreferences)[index]].addPoint(point);
@@ -129,7 +130,8 @@ async function getPointsByCategory(tripConfigurations: TripConfigurations, tripS
         const point: Point = new Point(
           googlePoint.place_id,
           googlePoint.name,
-          new GeoLocation(googlePoint.geometry.location.lat, googlePoint.geometry.location.lng)
+          new GeoLocation(googlePoint.geometry.location.lat, googlePoint.geometry.location.lng),
+          Object.keys(tripConfigurations.CategoryPreferences)[index]
         );
 
         tripConfigurations.CategoryPreferences[Object.keys(tripConfigurations.CategoryPreferences)[index]].addPoint(point);
@@ -414,7 +416,7 @@ export const getActivities = async (req: Request, res: Response, next: NextFunct
       initCategoryCounter(categoryPreferences);
     }
 
-    res.status(200).json({ data: trip });
+    res.status(200).json({ data: trip.toJSON() });
   } catch (error) {
     next(error);
   }
