@@ -12,7 +12,7 @@ const cacheMatrix: DistanceMatrix = new DistanceMatrix(40);
 cacheMatrix.manuallySetMatrix();
 const googleMapsClient = GoogleMaps.createClient({
   Promise: Promise,
-  key: ""
+  key: "AIzaSyDYaVhAvMrNzI5UxA0vinTsJ2kZxb_tTkk"
 });
 
 /**
@@ -30,7 +30,8 @@ interface BodyCategoryPreferences {
 }
 
 function checkDistance(arrA: Point[], arrB: Point[], distanceMatrix: DistanceMatrix, usageMap: {}): number {
-  let minDistance = 2000; // 5 km
+  const LIMIT = 300;
+  let minDistance = 2500; // 5 km
   let toIndex = -1;
 
   if (!arrA.length) {
@@ -54,6 +55,10 @@ function checkDistance(arrA: Point[], arrB: Point[], distanceMatrix: DistanceMat
         minDistance = distanceMatrix.matrix[arrA[i].DistanceMatrixIndex][arrB[j].DistanceMatrixIndex];
       }
     }
+  }
+
+  if (toIndex == -1) {
+    return -1;
   }
 
   console.log("from points:", arrA.map(point => point.Name).join(", "));
@@ -82,21 +87,22 @@ function buildCategoryPreferencesMap(bodyCategoryPreferences: BodyCategoryPrefer
 }
 
 async function getPointsByCategory(tripConfigurations: TripConfigurations, tripSettings: TripSettings) {
-  const promises: Array<GoogleMaps.PlaceSearchResult[]> = [];
+  // const promises: Array<GoogleMaps.PlaceSearchResult[]> = [];
+  const promises: Array<Promise<GoogleMaps.ClientResponse<GoogleMaps.PlaceSearchResponse>>> = [];
 
   Object.keys(tripConfigurations.CategoryPreferences).forEach(categoryName => {
-    /* promises.push(
+    promises.push(
       googleMapsClient
         .places({
           query: categoryName + " " + tripSettings.City
         })
         .asPromise()
-    ); */
-    promises.push(googleData[categoryName]);
+    );
+    // promises.push(googleData[categoryName]);
   });
 
-  // const searchPlacesResults: Array<GoogleMaps.ClientResponse<GoogleMaps.PlaceSearchResponse>> = await Promise.all(promises);
-  const searchPlacesResults: Array<GoogleMaps.PlaceSearchResult[]> = promises;
+  const searchPlacesResults: Array<GoogleMaps.ClientResponse<GoogleMaps.PlaceSearchResponse>> = await Promise.all(promises);
+  /* const searchPlacesResults: Array<GoogleMaps.PlaceSearchResult[]> = promises;
 
   for (let index = 0; index < Object.keys(tripConfigurations.CategoryPreferences).length; index++) {
     for (let resultIndex = 0; resultIndex < searchPlacesResults[index].length; resultIndex++) {
@@ -109,9 +115,9 @@ async function getPointsByCategory(tripConfigurations: TripConfigurations, tripS
 
       tripConfigurations.CategoryPreferences[Object.keys(tripConfigurations.CategoryPreferences)[index]].addPoint(point);
     }
-  }
+  } */
 
-  /* for (let index = 0; index < Object.keys(tripConfigurations.CategoryPreferences).length; index++) {
+  for (let index = 0; index < Object.keys(tripConfigurations.CategoryPreferences).length; index++) {
     for (let resultIndex = 0; resultIndex < searchPlacesResults[index].json.results.length; resultIndex++) {
       const googlePoint = searchPlacesResults[index].json.results[resultIndex];
       const point: Point = new Point(
@@ -122,11 +128,11 @@ async function getPointsByCategory(tripConfigurations: TripConfigurations, tripS
 
       tripConfigurations.CategoryPreferences[Object.keys(tripConfigurations.CategoryPreferences)[index]].addPoint(point);
     }
-  } */
+  }
 }
 
 async function fillDistanceMatrixByPoint(numberOfChunks: number, maxTo: number, points: Point[], distanceMatrix: DistanceMatrix) {
-  /* for (let i = 0; i < numberOfChunks; i++) {
+  for (let i = 0; i < numberOfChunks; i++) {
     const fromIIndex = i * maxTo;
     const first: Point[] = points.slice(fromIIndex, fromIIndex + maxTo);
     const fromStrArr = first.map(point => [point.Location.Latitude, point.Location.Longitude].join(","));
@@ -157,7 +163,7 @@ async function fillDistanceMatrixByPoint(numberOfChunks: number, maxTo: number, 
         }
       }
     }
-  } */
+  }
 
   for (let pointIndex = 0; pointIndex < points.length; pointIndex++) {
     points[pointIndex].DistanceMatrixIndex = pointIndex;
@@ -306,7 +312,8 @@ export const getActivities = async (req: Request, res: Response, next: NextFunct
     await getPointsByCategory(tripConfigurations, tripSettings);
     const points: Point[] = tripConfigurations.getAllPoints();
     const numberOfChunks = Math.ceil(points.length / maxTo);
-    const distanceMatrix = cacheMatrix; //new DistanceMatrix(points.length);
+    // const distanceMatrix = cacheMatrix;
+    const distanceMatrix = new DistanceMatrix(points.length);
     await fillDistanceMatrixByPoint(numberOfChunks, maxTo, points, distanceMatrix);
     const trip: Trip = new Trip(tripSettings.Days);
 
@@ -317,6 +324,8 @@ export const getActivities = async (req: Request, res: Response, next: NextFunct
       const resultsPartOne = combination(arr, tripSettings.PartOneHours);
       const partOneResultsRatings: number[] = rateCombinations(resultsPartOne);
       const maxRatingIndexPartOne = partOneResultsRatings.indexOf(Math.max(...partOneResultsRatings));
+
+      console.log(`=====> selected combination for day #${index + 1} part #1: ${resultsPartOne[maxRatingIndexPartOne].map(comb => comb.baseCategory.Name).join(", ")}`);
 
       for (
         let categoryInstanceIndex = 0;
@@ -350,6 +359,8 @@ export const getActivities = async (req: Request, res: Response, next: NextFunct
       const resultsPartTwo = combination(arr, tripSettings.PartTwoHours);
       const partTwoResultsRatings: number[] = rateCombinations(resultsPartTwo);
       const maxRatingIndexPartTwo = partTwoResultsRatings.indexOf(Math.max(...partTwoResultsRatings));
+
+      console.log(`=====> selected combination for day #${index + 1} part #2: ${resultsPartTwo[maxRatingIndexPartTwo].map(comb => comb.baseCategory.Name).join(", ")}`);
 
       for (
         let categoryInstanceIndex = 0;
