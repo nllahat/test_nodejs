@@ -3,15 +3,10 @@ import compression from "compression"; // compresses requests
 import session from "express-session";
 import bodyParser from "body-parser";
 import lusca from "lusca";
-import mongo from "connect-mongo";
 import flash from "express-flash";
 import path from "path";
-import mongoose from "mongoose";
 import passport from "passport";
-import bluebird from "bluebird";
-import { MONGODB_URI, SESSION_SECRET } from "./util/secrets";
-
-const MongoStore = mongo(session);
+import { SESSION_SECRET } from "./util/secrets";
 
 // Controllers (route handlers)
 import * as homeController from "./controllers/home";

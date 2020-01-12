@@ -68,7 +68,7 @@ export class BaseCategory {
     this._usuallySpentHours = usuallySpentHours;
     this._name = name;
     this._points = [];
-    this._maxPointsCount = Math.floor((userPreference * totalHoursPerDay) / usuallySpentHours);
+    this._maxPointsCount = Math.ceil((userPreference * totalHoursPerDay) / usuallySpentHours);
     this._selectedPointsCount = 0;
   }
 

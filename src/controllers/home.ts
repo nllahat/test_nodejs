@@ -7,12 +7,13 @@ import { TripConfigurations, CategoriesMap } from "../models/tripConfigurations"
 import { Constants } from "../config/constants";
 import { BaseCategory, Point, GeoLocation, CategoryInstance } from "../models/categories/baseCategory";
 import * as googleData from "../data.json";
+import { GOOGLE_API_KEY } from "../util/secrets";
 
 const cacheMatrix: DistanceMatrix = new DistanceMatrix(40);
 cacheMatrix.manuallySetMatrix();
 const googleMapsClient = GoogleMaps.createClient({
   Promise: Promise,
-  key: "AIzaSyDYaVhAvMrNzI5UxA0vinTsJ2kZxb_tTkk"
+  key: GOOGLE_API_KEY
 });
 
 /**
@@ -86,80 +87,94 @@ function buildCategoryPreferencesMap(bodyCategoryPreferences: BodyCategoryPrefer
   return categoryPreferences;
 }
 
-async function getPointsByCategory(tripConfigurations: TripConfigurations, tripSettings: TripSettings) {
-  // const promises: Array<GoogleMaps.PlaceSearchResult[]> = [];
-  const promises: Array<Promise<GoogleMaps.ClientResponse<GoogleMaps.PlaceSearchResponse>>> = [];
+async function getPointsByCategory(tripConfigurations: TripConfigurations, tripSettings: TripSettings, useCache: boolean) {
+  if (useCache) {
+    const promises: Array<GoogleMaps.PlaceSearchResult[]> = [];
+    Object.keys(tripConfigurations.CategoryPreferences).forEach(categoryName => {
+      promises.push(googleData[categoryName]);
+    });
 
-  Object.keys(tripConfigurations.CategoryPreferences).forEach(categoryName => {
-    promises.push(
-      googleMapsClient
-        .places({
-          query: categoryName + " " + tripSettings.City
-        })
-        .asPromise()
-    );
-    // promises.push(googleData[categoryName]);
-  });
+    const searchPlacesResults: Array<GoogleMaps.PlaceSearchResult[]> = promises;
 
-  const searchPlacesResults: Array<GoogleMaps.ClientResponse<GoogleMaps.PlaceSearchResponse>> = await Promise.all(promises);
-  /* const searchPlacesResults: Array<GoogleMaps.PlaceSearchResult[]> = promises;
+    for (let index = 0; index < Object.keys(tripConfigurations.CategoryPreferences).length; index++) {
+      for (let resultIndex = 0; resultIndex < searchPlacesResults[index].length; resultIndex++) {
+        const googlePoint = searchPlacesResults[index][resultIndex];
+        const point: Point = new Point(
+          googlePoint.place_id,
+          googlePoint.name,
+          new GeoLocation(googlePoint.geometry.location.lat, googlePoint.geometry.location.lng)
+        );
 
-  for (let index = 0; index < Object.keys(tripConfigurations.CategoryPreferences).length; index++) {
-    for (let resultIndex = 0; resultIndex < searchPlacesResults[index].length; resultIndex++) {
-      const googlePoint = searchPlacesResults[index][resultIndex];
-      const point: Point = new Point(
-        googlePoint.place_id,
-        googlePoint.name,
-        new GeoLocation(googlePoint.geometry.location.lat, googlePoint.geometry.location.lng)
-      );
-
-      tripConfigurations.CategoryPreferences[Object.keys(tripConfigurations.CategoryPreferences)[index]].addPoint(point);
+        tripConfigurations.CategoryPreferences[Object.keys(tripConfigurations.CategoryPreferences)[index]].addPoint(point);
+      }
     }
-  } */
+  } else {
+    const promises: Array<Promise<GoogleMaps.ClientResponse<GoogleMaps.PlaceSearchResponse>>> = [];
 
-  for (let index = 0; index < Object.keys(tripConfigurations.CategoryPreferences).length; index++) {
-    for (let resultIndex = 0; resultIndex < searchPlacesResults[index].json.results.length; resultIndex++) {
-      const googlePoint = searchPlacesResults[index].json.results[resultIndex];
-      const point: Point = new Point(
-        googlePoint.place_id,
-        googlePoint.name,
-        new GeoLocation(googlePoint.geometry.location.lat, googlePoint.geometry.location.lng)
+    Object.keys(tripConfigurations.CategoryPreferences).forEach(categoryName => {
+      promises.push(
+        googleMapsClient
+          .places({
+            query: categoryName + " " + tripSettings.City
+          })
+          .asPromise()
       );
+    });
 
-      tripConfigurations.CategoryPreferences[Object.keys(tripConfigurations.CategoryPreferences)[index]].addPoint(point);
+    const searchPlacesResults: Array<GoogleMaps.ClientResponse<GoogleMaps.PlaceSearchResponse>> = await Promise.all(promises);
+
+    for (let index = 0; index < Object.keys(tripConfigurations.CategoryPreferences).length; index++) {
+      for (let resultIndex = 0; resultIndex < searchPlacesResults[index].json.results.length; resultIndex++) {
+        const googlePoint = searchPlacesResults[index].json.results[resultIndex];
+        const point: Point = new Point(
+          googlePoint.place_id,
+          googlePoint.name,
+          new GeoLocation(googlePoint.geometry.location.lat, googlePoint.geometry.location.lng)
+        );
+
+        tripConfigurations.CategoryPreferences[Object.keys(tripConfigurations.CategoryPreferences)[index]].addPoint(point);
+      }
     }
   }
 }
 
-async function fillDistanceMatrixByPoint(numberOfChunks: number, maxTo: number, points: Point[], distanceMatrix: DistanceMatrix) {
-  for (let i = 0; i < numberOfChunks; i++) {
-    const fromIIndex = i * maxTo;
-    const first: Point[] = points.slice(fromIIndex, fromIIndex + maxTo);
-    const fromStrArr = first.map(point => [point.Location.Latitude, point.Location.Longitude].join(","));
-    const fromPointsStr: GoogleMaps.LatLng[] = [fromStrArr.join("|")];
+async function fillDistanceMatrixByPoint(
+  numberOfChunks: number,
+  maxTo: number,
+  points: Point[],
+  distanceMatrix: DistanceMatrix,
+  useCache: boolean
+) {
+  if (!useCache) {
+    for (let i = 0; i < numberOfChunks; i++) {
+      const fromIIndex = i * maxTo;
+      const first: Point[] = points.slice(fromIIndex, fromIIndex + maxTo);
+      const fromStrArr = first.map(point => [point.Location.Latitude, point.Location.Longitude].join(","));
+      const fromPointsStr: GoogleMaps.LatLng[] = [fromStrArr.join("|")];
 
-    for (let j = i; j < numberOfChunks; j++) {
-      const fromJIndex = j * maxTo;
-      const second = points.slice(fromJIndex, fromJIndex + maxTo);
-      const toStrArr = second.map(point => [point.Location.Latitude, point.Location.Longitude].join(","));
-      const toPointsStr: GoogleMaps.LatLng[] = [toStrArr.join("|")];
+      for (let j = i; j < numberOfChunks; j++) {
+        const fromJIndex = j * maxTo;
+        const second = points.slice(fromJIndex, fromJIndex + maxTo);
+        const toStrArr = second.map(point => [point.Location.Latitude, point.Location.Longitude].join(","));
+        const toPointsStr: GoogleMaps.LatLng[] = [toStrArr.join("|")];
 
-      const result: GoogleMaps.ClientResponse<GoogleMaps.DistanceMatrixResponse> = await googleMapsClient
-        .distanceMatrix({
-          mode: "walking",
-          origins: fromPointsStr,
-          destinations: toPointsStr,
-          units: "metric"
-        })
-        .asPromise();
+        const result: GoogleMaps.ClientResponse<GoogleMaps.DistanceMatrixResponse> = await googleMapsClient
+          .distanceMatrix({
+            mode: "walking",
+            origins: fromPointsStr,
+            destinations: toPointsStr,
+            units: "metric"
+          })
+          .asPromise();
 
-      for (let fromIndex = 0; fromIndex < first.length; fromIndex++) {
-        for (let toIndex = 0; toIndex < second.length; toIndex++) {
-          distanceMatrix.addEdge(
-            fromIndex + fromIIndex,
-            toIndex + fromJIndex,
-            result.json.rows[fromIndex].elements[toIndex].distance.value
-          );
+        for (let fromIndex = 0; fromIndex < first.length; fromIndex++) {
+          for (let toIndex = 0; toIndex < second.length; toIndex++) {
+            distanceMatrix.addEdge(
+              fromIndex + fromIIndex,
+              toIndex + fromJIndex,
+              result.json.rows[fromIndex].elements[toIndex].distance.value
+            );
+          }
         }
       }
     }
@@ -309,12 +324,11 @@ export const getActivities = async (req: Request, res: Response, next: NextFunct
   const tripConfigurations: TripConfigurations = new TripConfigurations(categoryPreferences);
 
   try {
-    await getPointsByCategory(tripConfigurations, tripSettings);
+    await getPointsByCategory(tripConfigurations, tripSettings, req.query.useCache);
     const points: Point[] = tripConfigurations.getAllPoints();
     const numberOfChunks = Math.ceil(points.length / maxTo);
-    // const distanceMatrix = cacheMatrix;
-    const distanceMatrix = new DistanceMatrix(points.length);
-    await fillDistanceMatrixByPoint(numberOfChunks, maxTo, points, distanceMatrix);
+    const distanceMatrix = req.query.useCache ? cacheMatrix : new DistanceMatrix(points.length);
+    await fillDistanceMatrixByPoint(numberOfChunks, maxTo, points, distanceMatrix, req.query.useCache);
     const trip: Trip = new Trip(tripSettings.Days);
 
     for (let index = 0; index < trip.days.length; index++) {
@@ -325,7 +339,11 @@ export const getActivities = async (req: Request, res: Response, next: NextFunct
       const partOneResultsRatings: number[] = rateCombinations(resultsPartOne);
       const maxRatingIndexPartOne = partOneResultsRatings.indexOf(Math.max(...partOneResultsRatings));
 
-      console.log(`=====> selected combination for day #${index + 1} part #1: ${resultsPartOne[maxRatingIndexPartOne].map(comb => comb.baseCategory.Name).join(", ")}`);
+      console.log(
+        `=====> selected combination for day #${index + 1} part #1: ${resultsPartOne[maxRatingIndexPartOne]
+          .map(comb => comb.baseCategory.Name)
+          .join(", ")}`
+      );
 
       for (
         let categoryInstanceIndex = 0;
@@ -360,7 +378,11 @@ export const getActivities = async (req: Request, res: Response, next: NextFunct
       const partTwoResultsRatings: number[] = rateCombinations(resultsPartTwo);
       const maxRatingIndexPartTwo = partTwoResultsRatings.indexOf(Math.max(...partTwoResultsRatings));
 
-      console.log(`=====> selected combination for day #${index + 1} part #2: ${resultsPartTwo[maxRatingIndexPartTwo].map(comb => comb.baseCategory.Name).join(", ")}`);
+      console.log(
+        `=====> selected combination for day #${index + 1} part #2: ${resultsPartTwo[maxRatingIndexPartTwo]
+          .map(comb => comb.baseCategory.Name)
+          .join(", ")}`
+      );
 
       for (
         let categoryInstanceIndex = 0;
