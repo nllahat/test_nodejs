@@ -31,7 +31,7 @@ interface BodyCategoryPreferences {
 }
 
 function checkDistance(arrA: Point[], arrB: Point[], distanceMatrix: DistanceMatrix, usageMap: {}): number {
-  const LIMIT = 300;
+  const MIN_RATING = 4.0;
   let minDistance = 2500; // 5 km
   let toIndex = -1;
 
@@ -50,6 +50,7 @@ function checkDistance(arrA: Point[], arrB: Point[], distanceMatrix: DistanceMat
       if (
         arrA[i].ID !== arrB[j].ID &&
         !usageMap[arrB[j].ID] &&
+        arrB[j].Rating >= MIN_RATING &&
         distanceMatrix.matrix[arrA[i].DistanceMatrixIndex][arrB[j].DistanceMatrixIndex] < minDistance
       ) {
         toIndex = j;
@@ -103,7 +104,8 @@ async function getPointsByCategory(tripConfigurations: TripConfigurations, tripS
           googlePoint.place_id,
           googlePoint.name,
           new GeoLocation(googlePoint.geometry.location.lat, googlePoint.geometry.location.lng),
-          Object.keys(tripConfigurations.CategoryPreferences)[index]
+          Object.keys(tripConfigurations.CategoryPreferences)[index],
+          googlePoint.rating
         );
 
         tripConfigurations.CategoryPreferences[Object.keys(tripConfigurations.CategoryPreferences)[index]].addPoint(point);
@@ -131,7 +133,8 @@ async function getPointsByCategory(tripConfigurations: TripConfigurations, tripS
           googlePoint.place_id,
           googlePoint.name,
           new GeoLocation(googlePoint.geometry.location.lat, googlePoint.geometry.location.lng),
-          Object.keys(tripConfigurations.CategoryPreferences)[index]
+          Object.keys(tripConfigurations.CategoryPreferences)[index],
+          googlePoint.rating
         );
 
         tripConfigurations.CategoryPreferences[Object.keys(tripConfigurations.CategoryPreferences)[index]].addPoint(point);
@@ -268,11 +271,15 @@ function combination(arr: CategoryInstance[], K: number): CategoryInstance[][] {
   return allResults;
 }
 
-function getCombinationOptions(categoryPreferences: CategoriesMap): CategoryInstance[] {
+function getCombinationOptions(categoryPreferences: CategoriesMap, tripDay: TripDay): CategoryInstance[] {
   const arr: CategoryInstance[] = [];
 
   Object.keys(categoryPreferences).forEach(categoryKey => {
-    arr.push(...categoryPreferences[categoryKey].getCategoryInstancesByUsuallySpentHours());
+    arr.push(
+      ...categoryPreferences[categoryKey].getCategoryInstancesByUsuallySpentHours(
+        tripDay.countPointPerCategoryPartOne()[categoryKey] || 0
+      )
+    );
   });
 
   return arr;
@@ -310,12 +317,6 @@ function rateCombinations(combinations: CategoryInstance[][]): number[] {
   return ratings;
 }
 
-function initCategoryCounter(categoryPreferences: CategoriesMap): void {
-  Object.keys(categoryPreferences).forEach(key => {
-    categoryPreferences[key].initSelectedPointCount();
-  });
-}
-
 export const getActivities = async (req: Request, res: Response, next: NextFunction) => {
   const maxLocations = 20;
   const maxTo = Math.floor(maxLocations / 2);
@@ -335,7 +336,20 @@ export const getActivities = async (req: Request, res: Response, next: NextFunct
 
     for (let index = 0; index < trip.days.length; index++) {
       trip.days[index] = new TripDay(tripSettings.PartOneHours, tripSettings.PartTwoHours);
-      let arr: CategoryInstance[] = getCombinationOptions(categoryPreferences);
+    }
+
+/*     Object.keys(categoryPreferences).forEach(categoryKey => {
+      let maxPoint = categoryPreferences[categoryKey].MaxPointsCount;
+      const points = [...categoryPreferences[categoryKey].Points].reverse();
+
+      for (let index = 0; index < trip.days.length && maxPoint; index++) {
+        trip.days[index].addToPartOne(points.pop(), categoryPreferences[categoryKey].UsuallySpentHours);
+        --maxPoint;
+      }
+    });
+ */
+    for (let index = 0; index < trip.days.length; index++) {
+      const arr: CategoryInstance[] = getCombinationOptions(categoryPreferences, trip.days[index]);
 
       const resultsPartOne = combination(arr, tripSettings.PartOneHours);
       const partOneResultsRatings: number[] = rateCombinations(resultsPartOne);
@@ -369,12 +383,11 @@ export const getActivities = async (req: Request, res: Response, next: NextFunct
             );
             trip.mainActivitiesMap[categoryInstance.baseCategory.Points[selectedIndex].ID] = true;
             categoryInstance.baseCategory.Points.splice(selectedIndex, 1);
-            categoryInstance.baseCategory.incSelectedPointCount();
           }
         }
       }
 
-      arr = getCombinationOptions(categoryPreferences);
+      /*arr = getCombinationOptions(categoryPreferences);
 
       const resultsPartTwo = combination(arr, tripSettings.PartTwoHours);
       const partTwoResultsRatings: number[] = rateCombinations(resultsPartTwo);
@@ -411,9 +424,7 @@ export const getActivities = async (req: Request, res: Response, next: NextFunct
             categoryInstance.baseCategory.incSelectedPointCount();
           }
         }
-      }
-
-      initCategoryCounter(categoryPreferences);
+      }*/
     }
 
     res.status(200).json({ data: trip.toJSON() });

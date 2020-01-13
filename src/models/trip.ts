@@ -44,6 +44,16 @@ export class TripDay {
     }
   }
 
+  public countPointPerCategoryPartOne() {
+    const map = {};
+    this.partOnePoints.forEach(point => {
+      map[point.Type] = map[point.Type] || 0;
+      map[point.Type]++;
+    });
+
+    return map;
+  }
+
   public addToPartTwo(point: Point, duration: number) {
     if (this.partTwoHoursSum + duration <= this.maxPartTwoHours) {
       this.partTwoPoints.push(point);

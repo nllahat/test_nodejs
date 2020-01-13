@@ -28,12 +28,14 @@ export class Point {
   private _location: GeoLocation;
   private _distanceMatrixIndex: number;
   private _type: string;
+  private _rating: number;
 
-  constructor(id: string, name: string, location: GeoLocation, type: string) {
+  constructor(id: string, name: string, location: GeoLocation, type: string, rating: number) {
     this._id = id;
     this._name = name;
     this._location = location;
     this._type = type;
+    this._rating = rating;
   }
 
   public get Location(): GeoLocation {
@@ -60,12 +62,17 @@ export class Point {
     return this._type;
   }
 
+  public get Rating(): number {
+    return this._rating;
+  }
+
   public toJSON() {
     return {
       id: this._id,
       name: this._name,
       type: this._type,
-      location: this._location && this._location.toJSON()
+      location: this._location && this._location.toJSON(),
+      rating: this._rating
     };
   }
 }
@@ -83,7 +90,6 @@ export class BaseCategory {
   private _name: string;
   private _points: Point[];
   private _maxPointsCount: number;
-  private _selectedPointsCount: number;
 
   constructor(name: string, userPreference: number, usuallySpentHours: number, totalHoursPerDay: number) {
     this._userPreference = userPreference;
@@ -91,7 +97,6 @@ export class BaseCategory {
     this._name = name;
     this._points = [];
     this._maxPointsCount = Math.ceil((userPreference * totalHoursPerDay) / usuallySpentHours);
-    this._selectedPointsCount = 0;
   }
 
   /**
@@ -104,25 +109,14 @@ export class BaseCategory {
   /**
    * getUsuallySpentHoursArray
    */
-  public getCategoryInstancesByUsuallySpentHours(): CategoryInstance[] {
+  public getCategoryInstancesByUsuallySpentHours(selectedPointsCount: number): CategoryInstance[] {
     const arr: CategoryInstance[] = [];
 
-    for (let index = 0; index < this._maxPointsCount - this._selectedPointsCount; index++) {
+    for (let index = 0; index < this._maxPointsCount - selectedPointsCount; index++) {
       arr.push(new CategoryInstance(this));
     }
 
     return arr;
-  }
-
-  /**
-   * incSelectedPoint
-   */
-  public incSelectedPointCount() {
-    this._selectedPointsCount++;
-  }
-
-  public initSelectedPointCount() {
-    this._selectedPointsCount = 0;
   }
 
   get UserPreference(): number {
