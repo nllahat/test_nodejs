@@ -20,7 +20,6 @@
         "removeComments": false,
     },
     "include": [
-        "src/**/*",
-        "node_modules",
+        "src/**/*"
     ]
 }

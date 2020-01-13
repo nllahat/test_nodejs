@@ -8,9 +8,10 @@
     },
     "author": "Neta Li Lahat",
     "license": "MIT",
+    "main": "dist/server.js",
     "scripts": {
         "start": "npm run serve",
-        "build": "npm run build-ts && npm run lint && npm run copy-static-assets",
+        "build": "npm run build-ts && npm run lint",
         "dev": "ts-node-dev --inspect --respawn src/server.ts",
         "serve": "node dist/server.js",
         "watch-node": "nodemon dist/server.js",
